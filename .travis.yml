@@ -1,0 +1,21 @@
+language: ruby
+cache:
+  - bundler
+rvm:
+  - 2.1
+  - 2.2
+  - 2.3.0
+  - 2.4.1
+before_install:
+  - gem update bundler
+install:
+  - bundle install
+script:
+  - bundle exec rake default
+  - gem build sensu-plugins-vio.gemspec
+  - gem install sensu-plugins-vio-*.gem
+deploy:
+  provider: rubygems
+  gem: sensu-plugins-vio
+  on:
+    tags: true
