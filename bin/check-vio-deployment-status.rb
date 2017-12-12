@@ -21,22 +21,30 @@ require 'json'
 
 class VioCliDeploymentStatus < Sensu::Plugin::Check::CLI
   def run
-    failed_tests = {}
+    warning_tests = ['VerifyTimeSynchronization'] # Tests which create warning
+    warning_failed_tests = {}
+    critical_failed_tests = {}
+
     dep_status_json = `sudo viocli deployment status --format json`
     dep_status_parsed = JSON.parse(dep_status_json)
 
     dep_status_parsed.each do |test|
       test_name = test['collector_name']
       test_status = test['overall_status']
-      if test_status != 'SUCCESS'
-        failed_tests[test_name] = test_status
+      next if test_status == 'SUCCESS'
+      if warning_tests.include? test_name
+        warning_failed_tests[test_name] = test_status
+      else
+        critical_failed_tests[test_name] = test_status
       end
     end
 
-    if failed_tests.empty?
-      ok 'VIO Deployment Status OK'
+    if critical_failed_tests.any?
+      critical critical_failed_tests.map { |k, v| "#{k}=#{v}" }.join(', ')
+    elsif warning_failed_tests.any?
+      warning warning_failed_tests.map { |k, v| "#{k}=#{v}" }.join(', ')
     else
-      critical failed_tests.map { |k, v| "#{k}=#{v}" }.join(', ')
+      ok 'VIO Deployment Status OK'
     end
   end
 end
